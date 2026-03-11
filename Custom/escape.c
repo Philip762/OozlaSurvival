@@ -37,6 +37,7 @@ const char *PLAYER_NOT_ESCAPED_MESSAGE = "\x11 Buy your freedom (%d bolts)";
 const char *PLAYER_HAS_ESCAPED_MESSAGE = "%d out of %d player(s) remaining...";
 typedef struct PlayerBuyEscapeMessage { char PlayerId; } PlayerBuyEscapeMessage_t;
 int gambitsGetActiveValue(void);
+
 //--------------------------------------------------------------------------
 int getEscapedPlayerCount() {
     int count = 0;
@@ -165,7 +166,7 @@ void checkForPlayerLeft() {
     if (pvars->CurrentCost > amountToReduce) {
         pvars->CurrentCost = pvars->CurrentCost - amountToReduce;
     } else {
-        disableGate(gate);
+        mobySetState(gate, GATE_STATE_DEACTIVATED, -1);
     }
 }
 
@@ -178,7 +179,7 @@ void gambitsEscapeModeInit(void) {
 	disableAllGates();
 	Moby *gate = mobyFindByUID(7);
     if (gate) {
-        enableGate(gate);
+        mobySetState(gate, GATE_STATE_ACTIVATED, -1);
         struct GatePVar* pvars = (struct GatePVar*)gate->PVar;
         if (assumedPlayerCount == 1) {
             pvars->CurrentCost = 125;
@@ -204,7 +205,7 @@ void gambitsNightmareEscapeModeInit(void) {
 	disableAllGates();
 	Moby *gate = mobyFindByUID(7);
     if (gate) {
-        enableGate(gate);
+        mobySetState(gate, GATE_STATE_ACTIVATED, -1);
         struct GatePVar* pvars = (struct GatePVar*)gate->PVar;
         if (assumedPlayerCount == 1) {
             pvars->CurrentCost = 175;
