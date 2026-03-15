@@ -277,6 +277,7 @@ void oozlaPopulateSpawnArgsFromConfig(struct MobSpawnEventArgs* output, struct M
   output->Behavior = config->Behavior;
 }
 
+int gambitsGetActiveValue(void);
 //--------------------------------------------------------------------------
 void oozlaInit(void) {
 	int i;
@@ -291,6 +292,12 @@ void oozlaInit(void) {
 
 	cheatsApplyWeather(WEATHER_LIGHT_RAIN_LIGHTNING);
 	DPRINTF("OOZLA: Initialized\n");
+	int activeGambit = gambitsGetActiveValue();
+	DPRINTF("gambit: %d \n", activeGambit);
+	if (activeGambit != 1 && activeGambit != 6) {
+		Moby *gate = mobyFindByUID(7);
+		if (gate) mobyDestroy(gate);
+	} 
 }
 
 //--------------------------------------------------------------------------

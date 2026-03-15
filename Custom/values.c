@@ -1,17 +1,19 @@
 #include <libdl/game.h>
+#include <libdl/moby.h>
 #include "shared.h"
+#include "gate.h"
 
 const float HEALTH_PERCENT_TABLE[GAME_MAX_PLAYERS] = {
-	[0] = 0,
-  	[1] = 0,
-  	[2] = 0,
-  	[3] = 0.05,
-  	[4] = 0.10,
-  	[5] = 0.15,
-  	[6] = 0.20,
-  	[7] = 0.30,
-  	[8] = 0.40,
-	[9] = 0.50
+    [0] = 0,
+    [1] = 0,
+    [2] = 0.05,
+    [3] = 0.10,
+    [4] = 0.15,
+    [5] = 0.20,
+    [6] = 0.30,
+    [7] = 0.40,
+    [8] = 0.50,
+    [9] = 0.60
 };
 
 const float DAMAGE_TABLE[GAME_MAX_PLAYERS] = {
@@ -26,3 +28,14 @@ const float DAMAGE_TABLE[GAME_MAX_PLAYERS] = {
   	[8] = 1.75,
 	[9] = 2.00
 };
+
+void disableAllGates(void) {
+  Moby* m = mobyListGetStart();
+  Moby* mEnd = mobyListGetEnd();
+  while (m < mEnd) {
+    m = mobyFindNextByOClass(m, GATE_OCLASS);
+    if (!m) break;
+    mobySetState(m, GATE_STATE_DEACTIVATED, -1);
+    ++m;
+  }
+}
