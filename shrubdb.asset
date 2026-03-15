@@ -1165,3 +1165,59 @@ MonoBehaviour:
       CorrectForAlphaBloom: 1
       RemoveAlpha: 0
       TextureOverride: {fileID: 0}
+  - Parent: {fileID: 0}
+    Hash:
+      serializedVersion: 2
+      Hash: 064cb090533f2b1719218c89c4f2497e
+    MipDistance: 64
+    ShrubClasses: 52c30000
+    Materials:
+    - Name: 0
+      MaxTextureSize: 2
+      TintColor: {r: 1, g: 1, b: 1, a: 1}
+      CorrectForAlphaBloom: 1
+      RemoveAlpha: 0
+      TextureOverride: {fileID: 0}
+  - Parent: {fileID: 0}
+    Hash:
+      serializedVersion: 2
+      Hash: 1b7abd8ade9871d9bcc31de294bf1ea5
+    MipDistance: 64
+    ShrubClasses: 53c30000
+    Materials:
+    - Name: 0 4
+      MaxTextureSize: 2
+      TintColor: {r: 1, g: 1, b: 1, a: 1}
+      CorrectForAlphaBloom: 1
+      RemoveAlpha: 0
+      TextureOverride: {fileID: 0}
+    - Name: 0 1
+      MaxTextureSize: 2
+      TintColor: {r: 1, g: 1, b: 1, a: 1}
+      CorrectForAlphaBloom: 1
+      RemoveAlpha: 0
+      TextureOverride: {fileID: 0}
+    - Name: 0
+      MaxTextureSize: 2
+      TintColor: {r: 1, g: 1, b: 1, a: 1}
+      CorrectForAlphaBloom: 1
+      RemoveAlpha: 0
+      TextureOverride: {fileID: 0}
+    - Name: 0 5
+      MaxTextureSize: 2
+      TintColor: {r: 1, g: 1, b: 1, a: 1}
+      CorrectForAlphaBloom: 1
+      RemoveAlpha: 0
+      TextureOverride: {fileID: 0}
+    - Name: 0 3
+      MaxTextureSize: 2
+      TintColor: {r: 1, g: 1, b: 1, a: 1}
+      CorrectForAlphaBloom: 1
+      RemoveAlpha: 0
+      TextureOverride: {fileID: 0}
+    - Name: 0 2
+      MaxTextureSize: 2
+      TintColor: {r: 1, g: 1, b: 1, a: 1}
+      CorrectForAlphaBloom: 1
+      RemoveAlpha: 0
+      TextureOverride: {fileID: 0}
