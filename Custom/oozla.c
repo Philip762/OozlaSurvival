@@ -285,7 +285,7 @@ void oozlaInit(void) {
 
 	TeleporterMoby = mobyFindByUID(20);
 	struct GadgetDef* mineLauncherDef = weaponGetDef(WEAPON_ID_MINE_LAUNCHER, 0);
-	if (mineLauncherDef) mineLauncherDef->mpMaxAmmo = 20; // Set base max ammo
+	if (mineLauncherDef) mineLauncherDef->mpMaxAmmo = 15; // Set base max ammo
 
 	MapConfig.Functions.OnPlayerGetResFunc = &oozlaGetResurrectPoint;
 	HOOK_J_OP(&mapReturnPlayersToMap, &oozlaDetermineRessurectionPoints, 0);
