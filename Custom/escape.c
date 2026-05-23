@@ -13,9 +13,10 @@
 #include <libdl/ui.h>
 #include <libdl/net.h>
 #include <libdl/gamesettings.h>
+
 #include "utils.h"
 #include "blip.h"
-#include "shared.h"
+#include "mobs/mob.h"
 #include "interop.h"
 #include "gate.h"
 #include "values.h"

@@ -1,6 +1,7 @@
 #include <libdl/game.h>
 #include <libdl/moby.h>
-#include "shared.h"
+
+#include "mobs/mob.h"
 #include "gate.h"
 
 const float HEALTH_PERCENT_TABLE[GAME_MAX_PLAYERS] = {

@@ -6,6 +6,7 @@
 #include <libdl/spawnpoint.h>
 #include <libdl/stdio.h>
 #include <libdl/string.h>
+#include <libdl/pad.h>
 #include <libdl/weapon.h>
 #include <libdl/cheats.h>
 #include <libdl/stdio.h>
@@ -13,12 +14,25 @@
 #include <libdl/random.h>
 #include <libdl/ui.h>
 #include <libdl/gamesettings.h>
+#include <libdl/game.h>
+#include <libdl/team.h>
+#include <libdl/collision.h>
+#include <libdl/math3d.h>
+#include <libdl/math.h>
+
 #include "values.h"
 #include "utils.h"
-#include "shared.h"
+#include "mobs/mob.h"
 #include "interop.h"
 #include "gate.h"
 #include "maputils.h"
+#include "items/stackables.h"
+#include "mobs/zombie.h"
+#include "game.h"
+
+#if SOULCOLLECTOR
+#include "soulcollector.h"
+#endif
 
 #define WATER_DROWN_INVINCIBILIITY_SECONDS		(0.25f)
 
@@ -27,6 +41,10 @@
 #define OOB_AREA_LILY_PAD_COURSE_IDX			(1)
 #define OOB_AREA_IDX_START						(2)
 #define OOB_AREA_IDX_END						(8)
+
+void stackableOnMobKilled(Moby *moby, int killedByPlayerId, int killedByWeaponId);
+
+void mapConsiderSpawnDrop(Moby *moby, int killedByPlayerId, int killedByWeaponId);
 
 float mapGetCurrentDifficulty(void);
 
@@ -73,7 +91,6 @@ void gambitsUpYourArsenalInit(void) {
 }
 
 // =================================== MAP ===================================
-Moby *TeleporterMoby = NULL;
 void mapReturnPlayersToMap(void); // Base survival function, called every tick
 short LocalPlayerRespawnCuboid[GAME_MAX_PLAYERS]; // Respawn cuboid indices for every player
 
@@ -140,27 +157,31 @@ void oozlaDetermineRessurectionPoints(void) {
 			LocalPlayerRespawnCuboid[playerId] = -1;
 		}
 	}
+}
 
-	VECTOR p, r, o;
-
-	// if we're in between rounds, don't return
-	if (!MapConfig.State) return;
-	if (MapConfig.State->RoundEndTime) return;
-	if (!TeleporterMoby) return;
-	if (TeleporterMoby->State == 1) return;
-
-	for (i = 0; i < GAME_MAX_LOCALS; ++i) {
-		Player *player = playerGetFromSlot(i);
-		if (!player || !player->SkinMoby) continue;
-		if (isPlayerInsideMegacorpStore(player)) {
-			// use player start
-			playerGetSpawnpoint(player, p, r, 0);
-			vector_fromyaw(o, (player->PlayerId / (float)GAME_MAX_PLAYERS) * MATH_TAU - MATH_PI);
-			vector_scale(o, o, 2.5);
-			vector_add(p, p, o);
-			playerSetPosRot(player, p, r);
-		}
+//--------------------------------------------------------------------------
+void itemFireBolt_OnMobKilled(Moby *moby, int killedByPlayerId, int killedByWeaponId) {
+	struct MobPVar *pvars = (struct MobPVar*)moby->PVar;
+	int spawnParamsIdx = pvars->MobVars.SpawnParamsIdx;
+	if (spawnParamsIdx == 4 || spawnParamsIdx == 5) { // leviathan
+		Player *player = playerGetFromIndex(killedByPlayerId);
+		if (!playerIsValid(player) || !player->IsLocal) return;
+		itemBeginConsume(player->PlayerId, ITEM_FIRE_BOLT);
 	}
+}
+
+//--------------------------------------------------------------------------
+void oozlaOnMobKilled(Moby *moby, int killedByPlayerId, int killedByWeaponId) {
+#if STACKABLES
+	stackableOnMobKilled(moby, killedByPlayerId, killedByWeaponId);
+#endif
+
+#if SOULCOLLECTOR
+	soulcollectorOnSoul(moby->Position, killedByPlayerId);
+#endif
+
+	mapConsiderSpawnDrop(moby, killedByPlayerId, killedByWeaponId);
+	itemFireBolt_OnMobKilled(moby, killedByPlayerId, killedByWeaponId);
 }
 
 //--------------------------------------------------------------------------
@@ -220,22 +241,9 @@ void oozlaProcessLilyPadCourseDrowning(void) {
 	}
 }
 
-//--------------------------------------------------------------------------
-void oozlaUpdateTeleporter(void)
-{
-	if (!TeleporterMoby) return;
-	
-	if (MapConfig.State->RoundCompleteTime) {
-		mobySetState(TeleporterMoby, 1, -1);
-		TeleporterMoby->DrawDist = 64;
-		TeleporterMoby->UpdateDist = 64;
-		TeleporterMoby->CollActive = 0;
-	} else {
-		mobySetState(TeleporterMoby, 2, -1);
-		TeleporterMoby->DrawDist = 0;
-		TeleporterMoby->UpdateDist = 0;
-		TeleporterMoby->CollActive = -1;
-	}
+u16 mobGetBangles(struct MobConfig* config, int spawnParamsIdx) {
+    if (spawnParamsIdx != 1) return (u16)config->Bangles;
+    return ZOMBIE_BANGLE_TORSO_2 | ZOMBIE_BANGLE_HEAD_3;
 }
 
 //--------------------------------------------------------------------------
@@ -264,7 +272,7 @@ void oozlaPopulateSpawnArgsFromConfig(struct MobSpawnEventArgs* output, struct M
   output->Bolts = config->Bolts;
   output->Xp = config->Xp;
   output->StartHealth = health;
-  output->Bangles = (u16)config->Bangles;
+  output->Bangles = mobGetBangles(config, spawnParamsIdx);
   output->Damage = (u16)damage;
   output->AttackRadiusEighths = (u8)(config->AttackRadius * 8);
   output->HitRadiusEighths = (u8)(config->HitRadius * 8);
@@ -283,7 +291,6 @@ void oozlaInit(void) {
 	int i;
 	for (i = 0; i < GAME_MAX_PLAYERS; i++) LocalPlayerRespawnCuboid[i] = -1;
 
-	TeleporterMoby = mobyFindByUID(20);
 	struct GadgetDef* mineLauncherDef = weaponGetDef(WEAPON_ID_MINE_LAUNCHER, 0);
 	if (mineLauncherDef) mineLauncherDef->mpMaxAmmo = 15; // Set base max ammo
 
@@ -300,13 +307,108 @@ void oozlaInit(void) {
 	} 
 }
 
+// use in firebolt and magic missile
+void vectorPitchUp(VECTOR out, VECTOR dir, float radians) {
+    VECTOR up = {0, 0, 1, 0};   // world up (Z up)
+    VECTOR right;
+
+    // right = cross(up, dir)
+    vector_outerproduct(right, up, dir);
+    vector_normalize(right, right);
+
+    // build quaternion from axis-angle
+    VECTOR q;
+    quat_fromangleaxis(q, right, radians);
+
+    // rotate dir by quaternion
+    // (you may already have a helper for this, otherwise use matrix or quat multiply)
+    MATRIX m;
+    matrix_unit(m);
+
+    // convert quaternion → matrix (if you have helper)
+    // or use matrix_from_up_normal_twist etc.
+
+    // simplest fallback: approximate with lerp (not perfect but works small angles)
+    VECTOR pitched;
+    VECTOR upComponent = {0,0,1,0};
+    vector_lerp(pitched, dir, upComponent, radians);
+    vector_normalize(out, pitched);
+}
+
+//--------------------------------------------------------------------------
+void playerFireShot(Player *player, int damage, int type, enum TEAM_IDS color, int shotLifeTicks, float rotationRad,
+                    float speed) {
+    VECTOR shotDirection;
+    MATRIX rot;
+
+    // base = camera forward
+    vector_copy(shotDirection, player->CameraForward);
+    vector_normalize(shotDirection, shotDirection);
+
+    if (rotationRad != 0) {
+        matrix_unit(rot);
+        matrix_rotate_z(rot, rot, rotationRad);
+        vector_apply(shotDirection, shotDirection, rot);
+    }
+	vectorPitchUp(shotDirection, shotDirection, 0.03490f);
+
+    vector_normalize(shotDirection, shotDirection);
+    vector_scale(shotDirection, shotDirection, speed);
+
+    VECTOR startPosition;
+    vector_copy(startPosition, player->PlayerPosition);
+    startPosition[2] += 1.34f; // raise up since PlayerPosition is at the feet of ratchet
+
+   Moby *shotMoby = ((Moby * (*)(float, float, VECTOR, VECTOR, Moby *, int, int, int, int))0x0045d598)
+    	(4, damage, startPosition, shotDirection, player->PlayerMoby, 1, 0x222124, -1, 0);
+
+    if (!shotMoby) return;
+
+    ((void (*)(Moby *, int)) 0x0045d758)(shotMoby, type);
+    ((void (*)(Moby *, int)) 0x0045d788)(shotMoby, color);
+    ((void (*)(Moby *, int)) 0x0045d7A8)(shotMoby, MOB_DAMAGE_FLAG_BASE);
+    ((void (*)(Moby *, int)) 0x0045d798)(shotMoby, shotLifeTicks);
+
+    shotMoby->Bolts = 0;
+    shotMoby->PParent = player->PlayerMoby;
+}
+
 //--------------------------------------------------------------------------
 void oozlaTick(void) {
 	static int init = 0;
+	MapConfig.Functions.OnMobKilledFunc = &oozlaOnMobKilled;
 	if (!init && MapConfig.ClientsReady) {
 		init = 1;
 		MapConfig.Functions.ModePopulateSpawnArgsFunc = &oozlaPopulateSpawnArgsFromConfig;
 	}
-	oozlaUpdateTeleporter();
 	oozlaProcessLilyPadCourseDrowning();
 }
+
+int rollCrit(Player *player) {
+	if (!player->IsLocal) return 0;
+
+	float critProbability = playerGetItemCount(player, ITEM_IMMEDIATE_PLAYER_CRIT_UPGRADE) * 0.01;
+	float r = randRange(0, 1);
+	if (r < critProbability) return 1;
+
+	return 0;
+}
+
+//--------------------------------------------------------------------------
+void itemFireBolt_OnConsumed(int defIdx, struct SurvivalItemDef *def, int playerId) {
+    Player *player = playerGetFromIndex(playerId);
+    if (!playerIsValid(player)) return;
+
+	int damage = 0;
+	if (!player->IsLocal) {
+		damage = 250;
+	} else {
+		damage = (playerGetItemCount(player, defIdx) + 1) * 250;
+		int dmgUpgradeCount = playerGetItemCount(player, ITEM_IMMEDIATE_PLAYER_DAMAGE_UPGRADE);
+		damage *= 1 + (0.08 * dmgUpgradeCount);
+		if (rollCrit(player)) damage *= 3;
+	}
+
+    playerFireShot(player, damage, 2, TEAM_ORANGE, TPS * 3, 0, 0.65f);
+}
+

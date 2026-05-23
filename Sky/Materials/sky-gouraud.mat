@@ -32,5 +32,5 @@ Material:
     - _Bloom: 0
     - _Opacity: 1
     m_Colors:
-    - _Color: {r: 0.011764706, g: 0.03137255, b: 0.023529412, a: 1}
+    - _Color: {r: 0.21568628, g: 0.29411766, b: 0.3529412, a: 1}
   m_BuildTextureStacks: []
